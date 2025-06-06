@@ -21,22 +21,22 @@ A lightweight real-time facial verification system built for edge devices using 
 ## 📂 Folder Structure
 
 FaceEntrySystem/
+├── core/                     # Core face detection & embedding logic
+│   ├── face_processor.py
+│   ├── vector_store.py
+│   └── utils.py
 │
-├── core/ # Core face detection & embedding logic
-│ ├── face_processor.py
-│ ├── vector_store.py
-│ └── utils.py
+├── face_dect/                # Face detection model (IR format)
+│   └── face-detection-0200.xml/.bin
 │
-├── face_dect/ # Face detection model (IR format)
-│ └── face-detection-0200.xml/.bin
+├── face_emd/                 # Embedding model (IR format)
+│   └── arcfaceresnet100-8.xml/.bin
 │
-├── face_emd/ # Embedding model (IR format)
-│ └── arcfaceresnet100-8.xml/.bin
-│
-├── ui.py # Streamlit frontend
-├── main.py # FastAPI backend
+├── ui.py                     # Streamlit frontend
+├── main.py                   # FastAPI backend
 ├── requirements.txt
 └── README.md
+
 
 
 ---

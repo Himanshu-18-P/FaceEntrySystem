@@ -84,7 +84,7 @@ class FaceVectorStore:
         D, I = self.index.search(norm_embed, top_k)
         best_idx = I[0][0]
         similarity = D[0][0]
-        print("similarity" , similarity)
+        print("similarity"  , similarity)
         if similarity > threshold:
             return self.metadata[best_idx], similarity
         return None, None

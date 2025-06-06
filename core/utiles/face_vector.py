@@ -110,7 +110,7 @@ class FaceProcessor:
                 "cached": True
             }, 1.0
 
-        if self.track_status[track_id]["tries"] >= 5:
+        if self.track_status[track_id]["tries"] >= 10:
             return {
                 "status": "blocked_after_5_attempts",
                 "track_id": track_id
@@ -167,10 +167,21 @@ class FaceProcessor:
 
             # Detect faces
             detections = self.detect_faces(frame)
-            detections_np = np.array([[*box, 1.0] for box in detections])  # Add dummy confidence for Sort
 
-            # Update tracker
-            tracked_objects = self.tracker.update(detections_np)
+            # Ensure detections are valid
+            detections_np = []
+            for box in detections:
+                if len(box) == 4:
+                    detections_np.append([*box, 1.0])  # add dummy confidence
+
+            detections_np = np.array(detections_np)
+
+            # Handle empty input safely
+            if detections_np.shape[0] == 0:
+                tracked_objects = np.empty((0, 5))
+            else:
+                tracked_objects = self.tracker.update(detections_np)
+
 
             for obj in tracked_objects:
                 x1, y1, x2, y2, track_id = map(int, obj)

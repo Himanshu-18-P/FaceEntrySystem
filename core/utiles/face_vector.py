@@ -5,7 +5,7 @@ from openvino.runtime import Core
 import os
 from sklearn.preprocessing import normalize
 from core.utiles.fassidb import FaceVectorStore  # Ensure this import path is correct
-
+from core.utiles.sort import *
 
 class FaceProcessor:
     def __init__(self, face_model_path: str, embed_model_path: str, vector_db: FaceVectorStore, device: str = "CPU"):
@@ -27,6 +27,9 @@ class FaceProcessor:
         self.vector_db = vector_db
         self.last_seen_users = {}  # cache for cooldown
         self.cooldown_secs = 10  # default cooldown
+
+        self.tracker = Sort(max_age=10000, min_hits=3, iou_threshold=0.3)
+        self.track_status = {} 
 
     def preprocess_frame(self, image: np.ndarray, size: tuple) -> np.ndarray:
         resized = cv2.resize(image, size)
@@ -92,43 +95,54 @@ class FaceProcessor:
         return x1 > rx1 and y1 > ry1 and x2 < rx2 and y2 < ry2
 
     def verify_user(self, frame: np.ndarray, face_box: tuple, track_id: int, threshold: float = 0.7):
+        if track_id not in self.track_status:
+            self.track_status[track_id] = {
+                "tries": 0,
+                "verified": False,
+                "person_id": None
+            }
+
+        if self.track_status[track_id]["verified"]:
+            return {
+                "status": "verified_cached",
+                "person": self.track_status[track_id]["person_id"],
+                "track_id": track_id,
+                "cached": True
+            }, 1.0
+
+        if self.track_status[track_id]["tries"] >= 5:
+            return {
+                "status": "blocked_after_5_attempts",
+                "track_id": track_id
+            }, 0.0
+
         x1, y1, x2, y2 = face_box
         face_crop = frame[y1:y2, x1:x2]
 
         if face_crop.size == 0:
             return {"status": "invalid_crop"}, None
 
-        # embedding = self.extract_embedding(face_crop)
-        embedding = self.get_face_embedding(frame)[0]
+        embedding = self.extract_embedding(face_crop)
         if embedding is None:
             return {"status": "no_embedding"}, None
 
         match_meta, score = self.vector_db.search(embedding, threshold=threshold)
+        self.track_status[track_id]["tries"] += 1
+
         if not match_meta:
-            return {"status": "not_matched"}, None
+            return {"status": "not_matched"}, score
 
+        # Success
         person_id = f"{match_meta['name']}::{match_meta['phone']}"
-        now = datetime.now()
+        self.track_status[track_id]["verified"] = True
+        self.track_status[track_id]["person_id"] = person_id
 
-        if track_id in self.last_seen_users:
-            last_seen = self.last_seen_users[track_id]
-            if now - last_seen < timedelta(seconds=self.cooldown_secs):
-                return {
-                    "status": "already_verified_recently",
-                    "person": person_id,
-                    "track_id": track_id,
-                    "cooldown": True,
-                    "last_verified": last_seen.isoformat()
-                }, score
-
-        self.last_seen_users[track_id] = now
         return {
             "status": "verified",
             "person": person_id,
-            "track_id": track_id,
-            "cooldown": False,
-            "verified_at": now.isoformat()
+            "track_id": track_id
         }, score
+
 
     def process_live_video(self, video_path="0", roi=(200, 100, 440, 380), is_visualize=False, stop_event=None):
         cap = cv2.VideoCapture(int(video_path) if str(video_path).isdigit() else video_path)
@@ -151,20 +165,29 @@ class FaceProcessor:
                 print("[INFO] Stream ended or disconnected.")
                 break
 
-            faces = self.detect_faces(frame)
-            for face_box in faces:
-                if self.inside_roi(face_box, roi):
-                    result, score = self.verify_user(frame, face_box, track_id)
-                    track_id += 1
+            # Detect faces
+            detections = self.detect_faces(frame)
+            detections_np = np.array([[*box, 1.0] for box in detections])  # Add dummy confidence for Sort
+
+            # Update tracker
+            tracked_objects = self.tracker.update(detections_np)
+
+            for obj in tracked_objects:
+                x1, y1, x2, y2, track_id = map(int, obj)
+
+                if self.inside_roi((x1, y1, x2, y2), roi):
+                    result, score = self.verify_user(frame, (x1, y1, x2, y2), track_id)
 
                     if is_visualize:
-                        x1, y1, x2, y2 = face_box
-                        if result["status"] == "verified":
+                        if result["status"] in ["verified", "verified_cached"]:
                             label = f"{result['person']} | {round(score, 2)}"
                             color = (0, 255, 0)
                         elif result["status"] == "already_verified_recently":
                             label = f"{result['person']} | verified"
                             color = (100, 255, 100)
+                        elif result["status"] == "blocked_after_5_attempts":
+                            label = f"Blocked | ID: {track_id}"
+                            color = (0, 0, 255)
                         else:
                             label = "Not allowed"
                             color = (0, 0, 255)
@@ -173,6 +196,7 @@ class FaceProcessor:
                         cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
 
                     result_log.append(result)
+
 
             if is_visualize:
                 rx1, ry1, rx2, ry2 = roi

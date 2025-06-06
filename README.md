@@ -25,13 +25,10 @@ FaceEntrySystem/
 │   ├── face_processor.py
 │   ├── vector_store.py
 │   └── utils.py
-│
 ├── face_dect/                # Face detection model (IR format)
 │   └── face-detection-0200.xml/.bin
-│
 ├── face_emd/                 # Embedding model (IR format)
 │   └── arcfaceresnet100-8.xml/.bin
-│
 ├── ui.py                     # Streamlit frontend
 ├── main.py                   # FastAPI backend
 ├── requirements.txt
@@ -60,6 +57,17 @@ source .venv/bin/activate        # Linux/Mac
 pip install -r requirements.txt
 
 ⚠️ Ensure OpenVINO Runtime is installed and its environment is sourced.
+
+# Step 1: Install OpenVINO's Model Downloader tool
+pip install openvino-dev
+
+# Step 2: Download the models
+omz_downloader --name face-detection-0200 --output_dir face_dect
+omz_downloader --name arcfaceresnet100-8 --output_dir face_emd
+
+# Step 3: Convert to IR format (if needed)
+# (Not needed for most Intel models — they already come in IR format)
+
 
 
 🚦 Run the System

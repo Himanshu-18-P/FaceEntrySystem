@@ -102,5 +102,5 @@ streamlit run ui.py
 
 ## Demo
 
-[![Watch the video](https://github.com/user-attachments/assets/ec75e8be-43f0-40fd-81b2-62e3202d9936)]
+[![Watch the video](https://github.com/Himanshu-18-P/FaceEntrySystem/blob/04e862375ff8320ee401d5b47c558dc900c77874/face.mp4)]
 

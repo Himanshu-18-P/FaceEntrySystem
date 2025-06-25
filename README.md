@@ -100,7 +100,6 @@ streamlit run ui.py
 
 --  Option to switch between cloud vs edge models
 
-## Demo
+![Demo](https://github.com/Himanshu-18-P/FaceEntrySystem/raw/main/face.gif)
 
-![Demo Preview](face.gif)
 

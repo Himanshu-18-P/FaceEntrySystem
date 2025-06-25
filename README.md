@@ -100,4 +100,7 @@ streamlit run ui.py
 
 --  Option to switch between cloud vs edge models
 
-https://github.com/user-attachments/assets/ec75e8be-43f0-40fd-81b2-62e3202d9936
+## Demo
+
+[![Watch the video](https://github.com/user-attachments/assets/ec75e8be-43f0-40fd-81b2-62e3202d9936)]
+

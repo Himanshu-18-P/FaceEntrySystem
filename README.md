@@ -99,3 +99,5 @@ streamlit run ui.py
 --  WebSocket updates for real-time UI
 
 --  Option to switch between cloud vs edge models
+
+https://github.com/user-attachments/assets/ec75e8be-43f0-40fd-81b2-62e3202d9936
